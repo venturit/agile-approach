@@ -29,6 +29,10 @@
 #
 #
 # Add commonly used gems
+
+gem 'carrierwave'
+gem 'fog'
+
 gem 'acts-as-taggable-on'
 gem 'activeadmin', github: 'gregbell/active_admin'
 gem 'aws-sdk'
@@ -43,7 +47,6 @@ gem 'devise'
 
 gem 'modernizr-rails', github:'venturit/modernizr-rails'
 
-gem 'paperclip'
 gem 'pg'
 gem 'pundit'
 gem 'puma'
@@ -174,7 +177,7 @@ remove_file 'README.rdoc'
 environment "config.action_mailer.default_url_options = {host: ENV['DOMAIN']}", env: ['development','production', 'test']
 
 
-smtp_paperclip_env =
+smtp_env =
 <<-SPE
 
   config.action_mailer.delivery_method = :smtp
@@ -190,18 +193,24 @@ smtp_paperclip_env =
     user_name: ENV["SENDGRID_USERNAME"],
     password: ENV["SENDGRID_PASSWORD"]
   }
-
-  config.paperclip_defaults = {
-    :storage => :s3,
-    :s3_credentials => {
-      :bucket =>  ENV["S3_BUCKET"],
-      :access_key_id =>  ENV["S3_KEY"],
-      :secret_access_key =>  ENV["S3_SECRET"]
-    }
-  }
 SPE
 
-environment smtp_paperclip_env, env: ['development','production']
+environment smtp_env, env: ['development','production']
+
+carrierwave_conf =
+<<-CAF
+CarrierWave.configure do |config|
+  config.fog_credentials = {
+    :provider               => 'AWS',
+    :aws_access_key_id      => ENV['S3_KEY'],
+    :aws_secret_access_key  => ENV['S3_SECRET']
+  }
+  config.fog_directory  = ENV['S3_BUCKET']
+  config.use_action_status = true
+end
+CAF
+
+create_file 'config/initializers/carrierwave.rb',carrierwave_conf
 
 #clean up public folder
 remove_file 'rm public/index.html'
